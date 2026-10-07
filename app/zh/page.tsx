@@ -5,5 +5,5 @@ import { copy } from "@/lib/copy/zh";
 import { reasoning } from "@/lib/reasoning/zh";
 
 export default function ChineseHome() {
-  return <UnstuckApp copy={copy} reasoning={reasoning} />;
+  return <UnstuckApp copy={copy} reasoning={reasoning} enableFeedback />;
 }

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { BrandMark } from "@/components/BrandMark";
+import { FeedbackForm } from "@/components/FeedbackForm";
 import { OptionButton } from "@/components/OptionButton";
 import { Button } from "@/components/Button";
 import { Screen, ScreenHeader } from "@/components/Screen";
@@ -20,9 +21,10 @@ type ContinueView = "choice" | "done";
 interface UnstuckAppProps {
   copy: Copy;
   reasoning: ReasoningEngine;
+  enableFeedback?: boolean;
 }
 
-export function UnstuckApp({ copy, reasoning }: UnstuckAppProps) {
+export function UnstuckApp({ copy, reasoning, enableFeedback = false }: UnstuckAppProps) {
   const [step, setStep] = useState<AppStep>("intention");
   const [intention, setIntention] = useState("");
   const [clarification, setClarification] =
@@ -31,6 +33,9 @@ export function UnstuckApp({ copy, reasoning }: UnstuckAppProps) {
   const [currentAction, setCurrentAction] = useState<ActionResult | null>(null);
   const [continueView, setContinueView] = useState<ContinueView>("choice");
   const [isFollowUp, setIsFollowUp] = useState(false);
+  const [primaryAction, setPrimaryAction] = useState<string | null>(null);
+  const [followUpAction, setFollowUpAction] = useState<string | null>(null);
+  const [tookFollowUp, setTookFollowUp] = useState(false);
 
   const reset = useCallback(() => {
     setStep("intention");
@@ -40,6 +45,9 @@ export function UnstuckApp({ copy, reasoning }: UnstuckAppProps) {
     setCurrentAction(null);
     setContinueView("choice");
     setIsFollowUp(false);
+    setPrimaryAction(null);
+    setFollowUpAction(null);
+    setTookFollowUp(false);
   }, []);
 
   const handleIntentionSubmit = () => {
@@ -67,8 +75,13 @@ export function UnstuckApp({ copy, reasoning }: UnstuckAppProps) {
       frictionId,
     };
 
+    const action = reasoning.getNextAction(context);
+
     setSession(context);
-    setCurrentAction(reasoning.getNextAction(context));
+    setCurrentAction(action);
+    setPrimaryAction(action.action);
+    setFollowUpAction(null);
+    setTookFollowUp(false);
     setIsFollowUp(false);
     setStep("action");
   };
@@ -85,7 +98,10 @@ export function UnstuckApp({ copy, reasoning }: UnstuckAppProps) {
 
   const handleOneMore = () => {
     if (!session) return;
-    setCurrentAction(reasoning.getFollowUpAction(session));
+    const action = reasoning.getFollowUpAction(session);
+    setCurrentAction(action);
+    setFollowUpAction(action.action);
+    setTookFollowUp(true);
     setIsFollowUp(true);
     setStep("action");
   };
@@ -214,6 +230,20 @@ export function UnstuckApp({ copy, reasoning }: UnstuckAppProps) {
             <p className="animate-fade-in text-xl font-medium text-stone-deep">
               {copy.enoughForNow}
             </p>
+
+            {enableFeedback && session && primaryAction && (
+              <FeedbackForm
+                key={session.intention}
+                journey={{
+                  intention: session.intention,
+                  scenario_id: session.scenarioId,
+                  friction_id: session.frictionId,
+                  primary_action: primaryAction,
+                  took_follow_up: tookFollowUp,
+                  follow_up_action: followUpAction,
+                }}
+              />
+            )}
 
             <button
               onClick={reset}
